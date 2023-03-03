@@ -1,7 +1,5 @@
 data/
-videos/
 logs/
-racetrack_ppo/
 jobscripts/
 *.sh
 *.o*

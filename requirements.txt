@@ -1,0 +1,242 @@
+absl-py==0.12.0
+alabaster==0.7.12
+ale-py==0.7.5
+apex==0.1
+appdirs==1.4.4
+argon2-cffi==20.1.0
+ascii-graph==1.5.1
+async-generator==1.10
+attrs @ file:///tmp/build/80754af9/attrs_1604765588209/work
+audioread==2.1.9
+AutoROM==0.4.2
+AutoROM.accept-rom-license==0.4.2
+Babel==2.9.0
+backcall @ file:///home/ktietz/src/ci/backcall_1611930011877/work
+beautifulsoup4 @ file:///home/linux1/recipes/ci/beautifulsoup4_1610988766420/work
+bleach==3.3.0
+blis @ file:///tmp/build/80754af9/cython-blis_1613319335612/work
+boto3==1.17.56
+botocore==1.20.56
+brotlipy==0.7.0
+cachetools==5.2.0
+catalogue==1.0.0
+certifi==2020.12.5
+cffi @ file:///tmp/build/80754af9/cffi_1605538068321/work
+chardet @ file:///tmp/build/80754af9/chardet_1605303185383/work
+click==7.1.2
+cloudpickle==2.1.0
+codecov==2.1.11
+conda==4.10.1
+conda-build==3.21.4
+conda-package-handling @ file:///tmp/build/80754af9/conda-package-handling_1603018141399/work
+coverage==5.5
+cryptography @ file:///tmp/build/80754af9/cryptography_1605544487601/work
+cxxfilt==0.2.2
+cycler==0.10.0
+cymem @ file:///tmp/build/80754af9/cymem_1613319259039/work
+Cython==0.28.4
+DataProperty==0.50.1
+decorator @ file:///tmp/build/80754af9/decorator_1617916966915/work
+defusedxml==0.7.1
+DLLogger @ git+git://github.com/NVIDIA/dllogger.git@26a0f8f1958de2c0c460925ff6102a4d2486d6cc
+docutils==0.16
+entrypoints==0.3
+filelock @ file:///home/linux1/recipes/ci/filelock_1610993975404/work
+flake8==3.7.9
+Flask==1.1.2
+future==0.18.2
+glob2 @ file:///home/linux1/recipes/ci/glob2_1610991677669/work
+google-auth==2.9.0
+google-auth-oauthlib==0.4.6
+graphsurgeon @ file:///workspace/TensorRT-7.2.3.4/graphsurgeon/graphsurgeon-0.4.5-py2.py3-none-any.whl
+grpcio==1.37.0
+gym==0.24.1
+gym-minigrid==1.0.3
+gym-notices==0.0.7
+h5py==3.2.1
+html2text==2020.1.16
+huggingface-hub==0.12.1
+hypothesis==4.50.8
+idna @ file:///tmp/build/80754af9/idna_1593446292537/work
+imageio==2.9.0
+imagesize==1.2.0
+importlib-metadata==4.11.4
+importlib-resources==5.8.0
+inflect==5.3.0
+iniconfig==1.1.1
+ipdb==0.13.7
+ipykernel==5.5.3
+ipython @ file:///tmp/build/80754af9/ipython_1617120885885/work
+ipython-genutils @ file:///tmp/build/80754af9/ipython_genutils_1606773439826/work
+itsdangerous==1.1.0
+jedi==0.17.0
+Jinja2 @ file:///tmp/build/80754af9/jinja2_1612213139570/work
+jmespath==0.10.0
+joblib==1.0.1
+json5==0.9.5
+jsonschema @ file:///tmp/build/80754af9/jsonschema_1594303806266/work
+jupyter-client==6.1.12
+jupyter-core==4.7.1
+jupyter-tensorboard @ git+https://github.com/cliffwoolley/jupyter_tensorboard.git@ffa7e26138b82549453306e06b535a9ac36db17a
+jupyterlab==2.3.1
+jupyterlab-pygments==0.1.2
+jupyterlab-server==1.2.0
+jupytext==1.11.1
+kiwisolver==1.3.1
+libarchive-c @ file:///tmp/build/80754af9/python-libarchive-c_1617780486945/work
+librosa==0.8.0
+llvmlite==0.35.0
+lmdb==1.2.1
+Mako==1.1.4
+Markdown==3.3.4
+markdown-it-py==0.6.2
+MarkupSafe==1.1.1
+maskrcnn-benchmark @ file:///opt/pytorch/examples/maskrcnn/pytorch
+matplotlib==3.4.1
+mbstrdecoder==1.0.1
+mccabe==0.6.1
+mdit-py-plugins==0.2.6
+mistune==0.8.4
+mlperf-compliance==0.0.10
+mock @ file:///tmp/build/80754af9/mock_1607622725907/work
+msgfy==0.1.0
+murmurhash @ file:///tmp/build/80754af9/murmurhash_1607456108764/work
+nbclient==0.5.3
+nbconvert==6.0.7
+nbformat==5.1.3
+nest-asyncio==1.5.1
+networkx==2.0
+nltk==3.6.2
+notebook==6.2.0
+numba @ file:///tmp/build/80754af9/numba_1614888130619/work
+numpy @ file:///tmp/build/80754af9/numpy_and_numpy_base_1618497246971/work
+nvidia-dali-cuda110==1.0.0
+nvidia-dlprof-pytorch-nvtx @ file:///nvidia/opt/dlprof/bin/nvidia_dlprof_pytorch_nvtx-1.1.0-py3-none-any.whl
+nvidia-pyprof @ git+https://github.com/NVIDIA/PyProf@c1dadccdc8334c49335cedc5549e1656ef4c62af
+nvidia-tensorboard @ file:///nvidia/opt/tensorboard_install/nvidia_tensorboard-1.15.0%2Bnv21.04-py3-none-any.whl
+nvidia-tensorboard-plugin-dlprof @ file:///nvidia/opt/tensorboard_install/nvidia_tensorboard_plugin_dlprof-1.2.0-py3-none-any.whl
+oauthlib==3.2.0
+onnx @ file:///opt/pytorch/pytorch/third_party/onnx
+onnxruntime==1.7.0
+opencv-python==4.6.0.66
+packaging==20.9
+pandas==1.1.4
+pandocfilters==1.4.3
+parso @ file:///tmp/build/80754af9/parso_1617223946239/work
+pathvalidate==2.4.1
+pexpect @ file:///tmp/build/80754af9/pexpect_1605563209008/work
+pickleshare @ file:///tmp/build/80754af9/pickleshare_1606932040724/work
+Pillow==9.4.0
+Pillow-SIMD @ file:///tmp/pillow-simd
+pkginfo==1.7.0
+plac @ file:///tmp/build/80754af9/plac_1594259967336/work
+pluggy==0.13.1
+polygraphy==0.28.3
+pooch==1.3.0
+preshed==3.0.2
+prettytable==2.1.0
+progressbar==2.5
+prometheus-client==0.10.1
+prompt-toolkit @ file:///tmp/build/80754af9/prompt-toolkit_1616415428029/work
+protobuf==3.15.8
+psutil @ file:///tmp/build/80754af9/psutil_1612298023621/work
+ptyprocess @ file:///tmp/build/80754af9/ptyprocess_1609355006118/work/dist/ptyprocess-0.7.0-py2.py3-none-any.whl
+py==1.10.0
+pyasn1==0.4.8
+pyasn1-modules==0.2.8
+pybind11==2.6.2
+pycocotools @ git+https://github.com/nvidia/cocoapi.git@9a47a76980d02f70a371e12d4fad61f644a209f1#subdirectory=PythonAPI
+pycodestyle==2.5.0
+pycosat==0.6.3
+pycparser @ file:///tmp/build/80754af9/pycparser_1594388511720/work
+pycuda==2020.1
+pydot==1.4.2
+pyflakes==2.1.1
+Pygments @ file:///tmp/build/80754af9/pygments_1615143339740/work
+pynvml==8.0.4
+pyOpenSSL @ file:///tmp/build/80754af9/pyopenssl_1605545627475/work
+pyparsing==2.4.7
+pyrsistent @ file:///tmp/build/80754af9/pyrsistent_1600141720057/work
+PySimpleGUI==4.60.1
+PySocks @ file:///tmp/build/80754af9/pysocks_1605305779399/work
+pytablewriter==0.47.0
+pytest==6.2.3
+pytest-cov==2.11.1
+pytest-pythonpath==0.7.3
+python-dateutil==2.8.1
+python-hostlist==1.21
+python-nvd3==0.15.0
+python-slugify==4.0.1
+pytools==2021.2.3
+pytorch-quantization==2.1.0
+pytorch-transformers==1.1.0
+pytz @ file:///tmp/build/80754af9/pytz_1612215392582/work
+PyWavelets==1.1.1
+PyYAML==5.4.1
+pyzmq==22.0.3
+regex==2021.4.4
+requests @ file:///tmp/build/80754af9/requests_1592841827918/work
+requests-oauthlib==1.3.1
+resampy==0.2.2
+revtok @ git+git://github.com/jekbradbury/revtok.git@f1998b72a941d1e5f9578a66dc1c20b01913caab
+rsa==4.8
+ruamel-yaml==0.15.87
+s3transfer==0.4.2
+sacrebleu==1.2.10
+sacremoses==0.0.35
+scikit-image==0.15.0
+scikit-learn==0.24.1
+scipy @ file:///tmp/build/80754af9/scipy_1616703221775/work
+Send2Trash==1.5.0
+sentence-transformers==2.2.2
+sentencepiece==0.1.95
+six @ file:///tmp/build/80754af9/six_1605205327372/work
+snowballstemmer==2.1.0
+SoundFile==0.10.3.post1
+soupsieve @ file:///tmp/build/80754af9/soupsieve_1616183228191/work
+sox==1.4.1
+spacy @ file:///tmp/build/80754af9/spacy_1608321098157/work
+Sphinx==3.5.4
+sphinx-glpi-theme==0.3
+sphinx-rtd-theme==0.5.2
+sphinxcontrib-applehelp==1.0.2
+sphinxcontrib-devhelp==1.0.2
+sphinxcontrib-htmlhelp==1.0.3
+sphinxcontrib-jsmath==1.0.1
+sphinxcontrib-qthelp==1.0.3
+sphinxcontrib-serializinghtml==1.1.4
+srsly @ file:///tmp/build/80754af9/srsly_1607548537638/work
+subword-nmt @ git+git://github.com/rsennrich/subword-nmt.git@48ba99e657591c329e0003f0c6e32e493fa959ef
+tabledata==1.1.3
+tabulate==0.8.9
+tensorboard @ file:///nvidia/opt/tensorboard_install/tensorboard-shim
+tensorboard-data-server==0.6.1
+tensorboard-plugin-wit==1.8.1
+tensorrt @ file:///workspace/TensorRT-7.2.3.4/python/tensorrt-7.2.3.4-cp38-none-linux_x86_64.whl
+terminado==0.9.4
+testpath==0.4.4
+text-unidecode==1.3
+thinc @ file:///tmp/build/80754af9/thinc_1607710152385/work
+threadpoolctl==2.1.0
+tokenizers==0.13.2
+toml==0.10.2
+torch @ file:///opt/pytorch/pytorch
+torchtext @ file:///opt/pytorch/text
+torchvision @ file:///opt/pytorch/vision
+tornado==6.1
+tqdm==4.53.0
+traitlets @ file:///home/ktietz/src/ci/traitlets_1611929699868/work
+transformers==4.26.1
+typepy==1.1.5
+typing-extensions==3.7.4.3
+uff @ file:///workspace/TensorRT-7.2.3.4/uff/uff-0.6.9-py2.py3-none-any.whl
+Unidecode==1.2.0
+urllib3 @ file:///tmp/build/80754af9/urllib3_1603305693037/work
+wasabi @ file:///tmp/build/80754af9/wasabi_1612219178408/work
+wcwidth @ file:///tmp/build/80754af9/wcwidth_1593447189090/work
+webencodings==0.5.1
+Werkzeug==1.0.1
+wrapt==1.10.11
+xgboost==1.7.4
+yacs==0.1.8
+zipp @ file:///tmp/build/80754af9/zipp_1615904174917/work

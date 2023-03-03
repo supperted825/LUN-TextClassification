@@ -9,3 +9,4 @@ jobscripts/
 *.DS_Store
 *__pycache__
 *.ipynb
+*.venus01

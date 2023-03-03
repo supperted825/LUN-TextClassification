@@ -10,6 +10,7 @@ class TransformerClassifier(nn.Module):
   
     def __init__(self, transformer='xlnet-base-cased', reinit_layers=0, focal_alpha=None):
         super(TransformerClassifier, self).__init__()
+        self.reinit_layers = reinit_layers
         self.backbone = AutoModel.from_pretrained(transformer)
         self.pooler = nn.Linear(768, 768)
         self.activation = nn.Tanh()
@@ -21,10 +22,9 @@ class TransformerClassifier(nn.Module):
         else:
             self.loss = nn.CrossEntropyLoss()
         
-        for n in range(self.reinit_n_layers):
+        for n in range(self.reinit_layers):
             self.backbone.encoder.layer[-(n+1)].apply(self._init_weight_and_bias)
     
-
         torch.nn.init.xavier_normal_(self.classifier.weight)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):

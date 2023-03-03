@@ -1,0 +1,11 @@
+data/
+videos/
+logs/
+racetrack_ppo/
+jobscripts/
+*.sh
+*.o*
+*.pbs
+*.DS_Store
+*__pycache__
+*.ipynb

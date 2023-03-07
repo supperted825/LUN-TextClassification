@@ -1,21 +1,25 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import AutoModel
+from transformers import AutoModel, AutoConfig
 
 from loss import FocalLoss
 
 
 class TransformerClassifier(nn.Module):
   
-    def __init__(self, transformer='xlnet-base-cased', reinit_layers=0, focal_alpha=None):
+    def __init__(self, transformer, tfidf_dim=0, reinit_layers=0, focal_alpha=None):
+
         super(TransformerClassifier, self).__init__()
         self.reinit_layers = reinit_layers
+        self.tfidf_dim = tfidf_dim
+        self.fc_dim = AutoConfig.from_pretrained(transformer).hidden_size
         self.backbone = AutoModel.from_pretrained(transformer)
-        self.pooler = nn.Linear(768, 768)
-        self.activation = nn.Tanh()
-        self.dropout = nn.Dropout(p=0.3)
-        self.classifier = torch.nn.Linear(768, 4)
+        
+        self.fc1 = nn.Linear(self.fc_dim, self.fc_dim)
+        self.fc2 = nn.Linear(self.fc_dim + tfidf_dim, self.fc_dim + tfidf_dim)
+        self.fc3 = nn.Linear(self.fc_dim + tfidf_dim, 4)
+        self.dropout = nn.Dropout(p=0.5)
     
         if focal_alpha is not None:
             self.loss = FocalLoss(alpha=focal_alpha)
@@ -23,11 +27,9 @@ class TransformerClassifier(nn.Module):
             self.loss = nn.CrossEntropyLoss()
         
         for n in range(self.reinit_layers):
-            self.backbone.encoder.layer[-(n+1)].apply(self._init_weight_and_bias)
-    
-        torch.nn.init.xavier_normal_(self.classifier.weight)
+            self.backbone.layer[-(n+1)].apply(self.backbone._init_weights)
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
+    def forward(self, input_ids, tfidf_features=None, token_type_ids=None, attention_mask=None, labels=None):
 
         output = self.backbone(
             input_ids=input_ids,
@@ -35,9 +37,19 @@ class TransformerClassifier(nn.Module):
             token_type_ids=token_type_ids
         )
 
-        pooled_output = self.pooler(output.last_hidden_state[:, 0])
-        pooled_output = self.activation(pooled_output)
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
+        output = output.last_hidden_state[:, 0]
         
-        return self.loss(logits, labels.long()) if labels is not None else logits
+        x = self.fc1(output)
+        x = F.relu(x)
+        x = self.dropout(x)
+        
+        if tfidf_features is not None:
+            x = torch.cat([x, tfidf_features], dim=1).float()
+        
+        x = self.fc2(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+        
+        x = self.fc3(x)
+        
+        return self.loss(x, labels.long()) if labels is not None else x

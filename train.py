@@ -13,6 +13,7 @@ import argparse
 import numpy as np
 import pandas as pd
 
+from nltk.corpus import stopwords
 from tqdm import trange, tqdm
 
 import torch
@@ -20,6 +21,7 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 from transformers import AutoTokenizer, AutoModel
 
 from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, f1_score
 from sklearn.metrics import precision_recall_fscore_support as score
 
@@ -37,6 +39,9 @@ class opts(object):
         self.parser.add_argument('--freeze_backbone', action='store_true')
         self.parser.add_argument('--focal_loss', action='store_true')
         self.parser.add_argument('--downsample', action='store_true')
+        
+        self.parser.add_argument('--use_tfidf', action='store_true')
+        self.parser.add_argument('--tfidf_features', default=2048, type=int)
         
     def parse(self, args=''):
         
@@ -56,8 +61,8 @@ opt = opts().parse()
 # root = '/content/gdrive/MyDrive/DSML Coursework/CS4248 Project/raw_data/'
 root = '/home/svu/e0425991/bert/'
 
-df_train = pd.read_csv(os.path.join(root, '/data/fulltrain.csv'), header=None)
-df_test = pd.read_csv(os.path.join(root, '/data/balancedtest.csv'), header=None)
+df_train = pd.read_csv(os.path.join(root, './data/fulltrain.csv'), header=None)
+df_test = pd.read_csv(os.path.join(root, './data/balancedtest.csv'), header=None)
 
 df_train.columns = ['cls', 'text']
 df_test.columns = ['cls', 'text']
@@ -117,15 +122,39 @@ train_idx, val_idx = train_test_split(
 
 # ----- Train and validation sets
 
-train_set = TensorDataset(train_tokens[train_idx], 
-                          train_att_masks[train_idx], 
-                          train_labels[train_idx])
+train_data = [train_tokens[train_idx], train_att_masks[train_idx], train_labels[train_idx]]
+val_data   = [train_tokens[val_idx], train_att_masks[val_idx], train_labels[val_idx]]
+test_data  = [test_tokens, test_att_masks, test_labels]
 
-val_set = TensorDataset(train_tokens[val_idx], 
-                        train_att_masks[val_idx], 
-                        train_labels[val_idx])
+if opt.use_tfidf:
 
-test_set = TensorDataset(test_tokens, test_att_masks, test_labels)
+    tfidf = TfidfVectorizer(
+        ngram_range=(1, 2),
+        stop_words=stopwords.words('english'),
+        max_df=0.8,
+        min_df=10,
+        max_features=5096
+    )
+    
+    train_tfidf = tfidf.fit_transform(df_train.loc[train_idx, 'text'].tolist())
+    val_tfidf   = tfidf.transform(df_train.loc[val_idx, 'text'].tolist())
+    test_tfidf  = tfidf.transform(df_test['text'].tolist())
+    
+    train_tfidf = torch.from_numpy(train_tfidf.toarray())
+    val_tfidf   = torch.from_numpy(val_tfidf.toarray())
+    test_tfidf  = torch.from_numpy(test_tfidf.toarray())
+    
+    train_data += [train_tfidf]
+    val_data   += [val_tfidf]
+    test_data  += [test_tfidf]
+    
+    tfidf_feature_dims = train_tfidf.shape[-1]
+else:
+    tfidf_feature_dims = 0
+    
+train_set = TensorDataset(*train_data)
+val_set = TensorDataset(*val_data)
+test_set = TensorDataset(*test_data)
 
 # ----- Stratify Batches for Train Loader
 
@@ -160,8 +189,9 @@ focal_loss_weight = torch.Tensor([0.5, 0.5, 1, 0.5]).float() if opt.focal_loss e
 
 model = TransformerClassifier(
     transformer = opt.transformer,
+    tfidf_dim = tfidf_feature_dims,
     reinit_layers = opt.reinit_layers,
-    focal_alpha = focal_loss_weight
+    focal_alpha = focal_loss_weight,
 )
 
 optimizer = torch.optim.AdamW(
@@ -175,10 +205,41 @@ if opt.freeze_backbone:
         param.requires_grad = False
 
 # ----- Run on GPU
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
 
-for _ in trange(opt.num_epochs, desc = 'Epoch'):
+# ----- Define Evaluation procedure for Validation & Test
+
+def evaluate(dataloader):
+    
+    label_pred = []
+    
+    for batch in dataloader:
+        
+        batch = tuple(t.to(device) for t in batch)
+        
+        if opt.use_tfidf:
+            b_input_ids, b_input_mask, _, b_tfidf = batch
+        else:
+            (b_input_ids, b_input_mask, _), b_tfidf = batch, None
+
+        with torch.no_grad():
+            eval_output = model(
+                b_input_ids,
+                tfidf_features = b_tfidf,
+                attention_mask = b_input_mask
+            )
+            
+        logits = eval_output.detach().cpu().numpy()
+        b_label_pred = np.argmax(logits, axis=1).tolist()
+        label_pred.extend(b_label_pred)
+        
+    return label_pred
+
+# ----- Begin Training
+
+for epoch in trange(opt.num_epochs, desc = 'Epoch'):
     
     tr_loss = nb_tr_examples = nb_tr_steps = 0
     model.train()
@@ -186,12 +247,17 @@ for _ in trange(opt.num_epochs, desc = 'Epoch'):
     for step, batch in enumerate(train_dataloader):
 
         batch = tuple(t.to(device) for t in batch)
-        b_input_ids, b_input_mask, b_labels = batch
+        
+        if opt.use_tfidf:
+            b_input_ids, b_input_mask, b_labels, b_tfidf = batch
+        else:
+            (b_input_ids, b_input_mask, b_labels), b_tfidf = batch, None
+        
         optimizer.zero_grad()
         
         loss = model(
-            b_input_ids, 
-            token_type_ids = None, 
+            b_input_ids,
+            tfidf_features = b_tfidf,
             attention_mask = b_input_mask, 
             labels = b_labels
         )
@@ -226,61 +292,23 @@ for _ in trange(opt.num_epochs, desc = 'Epoch'):
         #     print(flush=True)
 
     model.eval()
-    val_accuracy, val_precision, val_recall, val_f1 = [], [], [], []
-
-    for batch in validation_dataloader:
-        batch = tuple(t.to(device) for t in batch)
-        b_input_ids, b_input_mask, b_labels = batch
-        
-        with torch.no_grad():
-            eval_output = model(
-                b_input_ids, 
-                token_type_ids = None,
-                attention_mask = b_input_mask
-            )
     
-        logits = eval_output.detach().cpu().numpy()
-        label_pred = np.argmax(logits, axis=1)
-        label_ids = b_labels.to('cpu').numpy()
+    print(f'Epoch {epoch}')
 
-        accuracy = accuracy_score(label_ids, label_pred)
-        precision, recall, f1, _ = score(label_ids, label_pred, average='macro')
+    print('Train loss: {:.4f}'.format(tr_loss / nb_tr_steps))
+    
+    val_label_pred = evaluate(validation_dataloader)
+    
+    print('Validation Set Classification Report\n')
+    print(classification_report(train_labels[val_idx], val_label_pred))
+    print('Micro F1 : {:.4f}'.format(f1_score(train_labels[val_idx], val_label_pred, average='micro')))
 
-        val_accuracy.append(accuracy)
-        val_precision.append(precision)
-        val_recall.append(recall)
-        val_f1.append(f1)
-
-
-    label_pred = []
-
-    for batch in test_dataloader:
-
-        batch = tuple(t.to(device) for t in batch)
-        b_input_ids, b_input_mask, _ = batch
-
-        with torch.no_grad():
-            eval_output = model(
-                b_input_ids, 
-                token_type_ids = None,
-                attention_mask = b_input_mask
-            )
-            
-        logits = eval_output.detach().cpu().numpy()
-        b_label_pred = np.argmax(logits, axis=1).tolist()
-        label_pred.extend(b_label_pred)
-
-
-    print('\n\t - Train loss: {:.4f}'.format(tr_loss / nb_tr_steps))
-    print('\t - Validation Accuracy: {:.4f}'.format(np.mean(val_accuracy).round(2)))
-    print('\t - Validation Precision: {:.4f}'.format(np.mean(val_precision).round(2)))
-    print('\t - Validation Recall: {:.4f}'.format(np.mean(val_recall).round(2)))
-    print('\t - Validation F1: {:.4f}'.format(np.mean(val_f1).round(2)))
+    test_label_pred = evaluate(test_dataloader)
     
     print('Test Set Classification Report\n')
-    print(classification_report(test_labels, label_pred))
-    print(f1_score(test_labels, label_pred, average='micro'))
-    print('\n', classification_report(test_labels, label_pred, output_dict=True), flush=True)
+    print(classification_report(test_labels, test_label_pred))
+    print('Micro F1 : {:.4f}'.format(f1_score(test_labels, test_label_pred, average='micro')))
+    print('\n', classification_report(test_labels, test_label_pred, output_dict=True), flush=True)
 
 def save(model, optimizer):
     # save

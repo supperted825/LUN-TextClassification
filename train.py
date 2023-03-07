@@ -31,17 +31,16 @@ class opts(object):
     def __init__(self):
         self.parser = argparse.ArgumentParser()
 
-        # basic experiment setting
+        self.parser.add_argument('--exp_id', default='default')
         self.parser.add_argument('--transformer', default="xlnet-base-cased")
-        self.parser.add_argument('--num_epochs', default=3, type=int)
+        self.parser.add_argument('--num_epochs', default=20, type=int)
         self.parser.add_argument('--batch_size', default=32, type=int)
         self.parser.add_argument('--reinit_layers', default=0, type=int)
         self.parser.add_argument('--freeze_backbone', action='store_true')
         self.parser.add_argument('--focal_loss', action='store_true')
         self.parser.add_argument('--downsample', action='store_true')
-        
         self.parser.add_argument('--use_tfidf', action='store_true')
-        self.parser.add_argument('--tfidf_features', default=2048, type=int)
+        self.parser.add_argument('--tfidf_features', default=5096, type=int)
         
     def parse(self, args=''):
         
@@ -51,6 +50,11 @@ class opts(object):
         print('Arguments:')
         for k, v in sorted(args.items()):
             print('  %s: %s' % (str(k), str(v)), flush=True)
+            
+        with open(f'./logs/{opt.exp_id}_opt.txt', 'w+', newline ='') as file:
+            args = dict((name, getattr(opt, name)) for name in dir(opt) if not name.startswith('_'))
+            for k, v in sorted(args.items()):
+                file.write('  %s: %s\n' % (str(k), str(v)))
 
         return opt
 
@@ -237,6 +241,14 @@ def evaluate(dataloader):
         
     return label_pred
 
+# ----- Set up Logging to CSV
+
+idx = ['precision', 'recall', 'f1', 'support']
+col = list(range(4)) + ['macro']
+items = [i + '_' + str(c) for i in idx for c in col] + ['accuracy', 'micro_f1']
+items_ordered = [i + '_' + str(c) for c in col for i in idx] + ['accuracy', 'micro_f1']
+results_df = pd.DataFrame(columns=items)
+
 # ----- Begin Training
 
 for epoch in trange(opt.num_epochs, desc = 'Epoch'):
@@ -268,47 +280,29 @@ for epoch in trange(opt.num_epochs, desc = 'Epoch'):
         tr_loss += loss.item()
         nb_tr_examples += b_input_ids.size(0)
         nb_tr_steps += 1
-        
-        # if step % 50 == 0:
-
-        #     label_pred = []
-        #     for batch in test_dataloader:
-        #         batch = tuple(t.to(device) for t in batch)
-        #         b_input_ids, b_input_mask, _ = batch
-
-        #         with torch.no_grad():
-        #             eval_output = model(
-        #                 b_input_ids, 
-        #                 token_type_ids = None,
-        #                 attention_mask = b_input_mask
-        #             )
-                    
-        #         logits = eval_output.detach().cpu().numpy()
-        #         b_label_pred = np.argmax(logits, axis=1).tolist()
-        #         label_pred.extend(b_label_pred)
-            
-        #     print()
-        #     print(classification_report(test_labels, label_pred))
-        #     print(flush=True)
 
     model.eval()
     
-    print(f'Epoch {epoch}')
-
-    print('Train loss: {:.4f}'.format(tr_loss / nb_tr_steps))
-    
     val_label_pred = evaluate(validation_dataloader)
+    test_label_pred = evaluate(test_dataloader)
+    
+    print(f'Epoch {epoch} - {opt.exp_id}')
+    print('Train loss: {:.4f}'.format(tr_loss / nb_tr_steps))
     
     print('Validation Set Classification Report\n')
     print(classification_report(train_labels[val_idx], val_label_pred))
-    print('Micro F1 : {:.4f}'.format(f1_score(train_labels[val_idx], val_label_pred, average='micro')))
 
-    test_label_pred = evaluate(test_dataloader)
-    
     print('Test Set Classification Report\n')
-    print(classification_report(test_labels, test_label_pred))
-    print('Micro F1 : {:.4f}'.format(f1_score(test_labels, test_label_pred, average='micro')))
-    print('\n', classification_report(test_labels, test_label_pred, output_dict=True), flush=True)
+    print(classification_report(test_labels, test_label_pred), flush=True)
+    
+    micro_f1 = f1_score(test_labels, test_label_pred, average='micro')
+    epoch_report = classification_report(test_labels, test_label_pred, output_dict=True)
+    
+    res = pd.DataFrame(epoch_report)
+    acc = res['accuracy'].mean()
+    res = res.drop(columns=['accuracy', 'weighted avg'])
+    results_df.loc[epoch] = res.to_numpy().flatten().tolist() + [acc, micro_f1]
+
 
 def save(model, optimizer):
     # save
@@ -317,4 +311,7 @@ def save(model, optimizer):
         'optimizer_state_dict': optimizer.state_dict()
     }, os.path.join(root, 'BERT.pth'))
 
+
 save(model, optimizer)
+results_df = results_df[items_ordered]
+results_df.to_csv(f'./logs/{opt.exp_id}.csv')

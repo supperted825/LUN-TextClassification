@@ -38,7 +38,6 @@ class opts(object):
         self.parser.add_argument('--reinit_layers', default=0, type=int)
         self.parser.add_argument('--freeze_backbone', action='store_true')
         self.parser.add_argument('--focal_loss', action='store_true')
-        self.parser.add_argument('--downsample', action='store_true')
         self.parser.add_argument('--use_tfidf', action='store_true')
         self.parser.add_argument('--tfidf_features', default=5096, type=int)
         
@@ -71,19 +70,6 @@ df_test = pd.read_csv(os.path.join(root, './data/balancedtest.csv'), header=None
 df_train.columns = ['cls', 'text']
 df_test.columns = ['cls', 'text']
 
-# ----- Downsample to Induce Class Balance
-
-if opt.downsample:
-
-    df_train_new = pd.DataFrame([], columns=['cls', 'text'])
-    min_cls_count = df_train['cls'].value_counts().min()
-
-    for cls_ in range(1, 5):
-        df_tmp = df_train[df_train['cls'] == cls_].sample(min_cls_count, replace=False)
-        df_train_new = pd.concat([df_train_new, df_tmp])
-
-    df_train = df_train_new.sample(frac=1).reset_index(drop=True)
-
 # ----- Tokenize Training Data
 
 tokenizer = AutoTokenizer.from_pretrained(opt.transformer, do_lower_case='uncased' in opt.transformer)
@@ -104,7 +90,7 @@ def tokenize(df):
     token_id = []
     attention_masks = []
 
-    for sample in tqdm(df['text'].values):
+    for sample in df['text'].values:
         encoding_dict = tokenize_sample(sample, tokenizer)
         token_id.append(encoding_dict['input_ids'])
         attention_masks.append(encoding_dict['attention_mask'])

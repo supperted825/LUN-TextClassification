@@ -53,3 +53,23 @@ class TransformerClassifier(nn.Module):
         x = self.fc3(x)
         
         return self.loss(x, labels.long()) if labels is not None else x
+    
+    
+class MLPClassifier(nn.Module):
+    
+    def __init__(self, tfidf_dim, fc_dim=0):
+        
+        super(MLPClassifier, self).__init__()
+        self.fc1 = nn.Linear(tfidf_dim, fc_dim + tfidf_dim)
+        self.fc2 = nn.Linear(fc_dim + tfidf_dim, 4)
+        self.dropout = nn.Dropout(p=0.5)
+        self.loss = nn.CrossEntropyLoss()
+    
+    def forward(self, x, y=None):
+        
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+        x = self.fc2(x)
+
+        return self.loss(x, y.long()) if y is not None else x

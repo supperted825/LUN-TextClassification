@@ -1,6 +1,7 @@
 data/
 logs/
 jobscripts/
+pbslogs/
 *.sh
 *.o*
 *.pbs
@@ -8,3 +9,4 @@ jobscripts/
 *__pycache__
 *.ipynb
 *.venus01
+*.pth

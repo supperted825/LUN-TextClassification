@@ -6,6 +6,19 @@ from transformers import AutoModel, AutoConfig
 from loss import FocalLoss
 
 
+class MeanPooling(nn.Module):
+    def __init__(self):
+        super(MeanPooling, self).__init__()
+        
+    def forward(self, last_hidden_state, attention_mask):
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
+        sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, 1)
+        sum_mask = input_mask_expanded.sum(1)
+        sum_mask = torch.clamp(sum_mask, min=1e-9)
+        mean_embeddings = sum_embeddings / sum_mask
+        return mean_embeddings
+
+
 class TransformerClassifier(nn.Module):
   
     def __init__(self, transformer, tfidf_dim=0, reinit_layers=0, focal_alpha=None):
@@ -65,11 +78,12 @@ class MLPClassifier(nn.Module):
         self.dropout = nn.Dropout(p=0.5)
         self.loss = nn.CrossEntropyLoss()
     
-    def forward(self, x, y=None):
+    def forward(self, x, labels=None):
         
+        x = x.float()
         x = self.fc1(x)
         x = F.relu(x)
         x = self.dropout(x)
         x = self.fc2(x)
 
-        return self.loss(x, y.long()) if y is not None else x
+        return self.loss(x, labels.long()) if labels is not None else x

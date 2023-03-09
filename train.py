@@ -33,10 +33,12 @@ class opts(object):
 
         self.parser.add_argument('--exp_id', default='default')
         self.parser.add_argument('--transformer', default="xlnet-base-cased")
-        self.parser.add_argument('--num_epochs', default=20, type=int)
-        self.parser.add_argument('--batch_size', default=32, type=int)
+        self.parser.add_argument('--num_epochs', default=10, type=int)
+        self.parser.add_argument('--batch_size', default=16, type=int)
+        self.parser.add_argument('--lr', default=5e-5, type=float)
         self.parser.add_argument('--reinit_layers', default=0, type=int)
         self.parser.add_argument('--freeze_backbone', action='store_true')
+        self.parser.add_argument('--unfreeze_layers', default=0, type=int)
         self.parser.add_argument('--focal_loss', action='store_true')
         self.parser.add_argument('--use_tfidf', action='store_true')
         self.parser.add_argument('--tfidf_features', default=5096, type=int)
@@ -45,6 +47,9 @@ class opts(object):
         
         opt = self.parser.parse_args()
         args = dict((name, getattr(opt, name)) for name in dir(opt) if not name.startswith('_'))
+        
+        if opt.unfreeze_layers > 0:
+            opt.freeze_backbone = True
         
         print('Arguments:')
         for k, v in sorted(args.items()):
@@ -186,13 +191,23 @@ model = TransformerClassifier(
 
 optimizer = torch.optim.AdamW(
     model.parameters(),
-    lr = 5e-5,
+    lr = opt.lr,
     eps = 1e-08
 )
+
+# ----- Configure Backbone Freezing
 
 if opt.freeze_backbone:
     for param in model.backbone.parameters():
         param.requires_grad = False
+        
+if opt.unfreeze_layers > 0:
+    match = [f'encoder.layer.{i}.' for i in range(12 - opt.unfreeze_layers, 12)]
+    match = match + ['encoder.rel_embeddings.weight', 'encoder.LayerNorm', 'pooler']
+    for name, param in model.backbone.named_parameters():
+        if any(name.startswith(m) for m in match):
+            param.requires_grad = True
+            continue
 
 # ----- Run on GPU
 

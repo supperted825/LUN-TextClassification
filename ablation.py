@@ -33,7 +33,7 @@ class opts(object):
 
         self.parser.add_argument('--exp_id', default='log-reg')
         self.parser.add_argument('--num_epochs', default=20, type=int)
-        self.parser.add_argument('--batch_size', default=32, type=int)
+        self.parser.add_argument('--batch_size', default=16, type=int)
         self.parser.add_argument('--focal_loss', action='store_true')
         self.parser.add_argument('--tfidf_features', default=5096, type=int)
         
@@ -72,7 +72,7 @@ df_test['cls'] = df_test['cls'] - 1
 # ----- Train Test Split
 
 train_idx, val_idx = train_test_split(
-    np.arange(len(df_train)),
+    np.arange(len(df_train['cls'])),
     test_size = 0.2,
     shuffle = True,
     stratify = df_train['cls'])
@@ -107,7 +107,7 @@ tfidf_feature_dims = train_tfidf.shape[-1]
 
 # ----- Stratify Batches for Train Loader
 
-y_train = train_labels[train_idx].numpy()
+y_train = train_labels
 class_sample_count = [(y_train == t).sum() for t in range(4)]
 
 weight = 1. / np.array(class_sample_count)
@@ -211,7 +211,7 @@ for epoch in trange(opt.num_epochs, desc = 'Epoch'):
     print('Train loss: {:.4f}'.format(tr_loss / nb_tr_steps))
     
     print('Validation Set Classification Report\n')
-    print(classification_report(train_labels[val_idx], val_label_pred))
+    print(classification_report(val_labels, val_label_pred))
 
     print('Test Set Classification Report\n')
     print(classification_report(test_labels, test_label_pred), flush=True)

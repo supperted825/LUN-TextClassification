@@ -25,14 +25,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, f1_score
 from sklearn.metrics import precision_recall_fscore_support as score
 
-from models import MLPClassifier
+from src.models import MLPClassifier
 
 class opts(object):
     def __init__(self):
         self.parser = argparse.ArgumentParser()
 
-        self.parser.add_argument('--exp_id', default='log-reg')
-        self.parser.add_argument('--num_epochs', default=20, type=int)
+        self.parser.add_argument('--exp_id', default='mlpclassifier')
+        self.parser.add_argument('--num_epochs', default=5, type=int)
         self.parser.add_argument('--batch_size', default=16, type=int)
         self.parser.add_argument('--focal_loss', action='store_true')
         self.parser.add_argument('--tfidf_features', default=5096, type=int)
@@ -54,6 +54,7 @@ class opts(object):
         return opt
 
 opt = opts().parse()
+torch.manual_seed(0)
 
 # ----- Read Data & Clean
 
@@ -224,15 +225,5 @@ for epoch in trange(opt.num_epochs, desc = 'Epoch'):
     res = res.drop(columns=['accuracy', 'weighted avg'])
     results_df.loc[epoch] = res.to_numpy().flatten().tolist() + [acc, micro_f1]
 
-
-def save(model, optimizer):
-    # save
-    torch.save({
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict()
-    }, os.path.join(root, 'BERT.pth'))
-
-
-save(model, optimizer)
-results_df = results_df[items_ordered]
+results_df = results_df[items_ordered].round(3)
 results_df.to_csv(f'./logs/{opt.exp_id}.csv')

@@ -13,6 +13,7 @@ import argparse
 import numpy as np
 import pandas as pd
 
+from nltk import wordpunct_tokenize
 from nltk.corpus import stopwords
 from tqdm import trange, tqdm
 
@@ -25,95 +26,93 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, f1_score
 from sklearn.metrics import precision_recall_fscore_support as score
 
-from models import TransformerClassifier
+import nlpaug.flow as naf
+import nlpaug.augmenter.word as naw
+
+from src.models import TransformerClassifier
+from src.learning_rate import LayerwiseLR, LowerBackboneLR
+from src.utils import tokenize
+
 
 class opts(object):
     def __init__(self):
         self.parser = argparse.ArgumentParser()
 
         self.parser.add_argument('--exp_id', default='default')
+        self.parser.add_argument('--seed', default=42, type=int)
         self.parser.add_argument('--transformer', default="xlnet-base-cased")
-        self.parser.add_argument('--num_epochs', default=10, type=int)
+        self.parser.add_argument('--num_epochs', default=5, type=int)
         self.parser.add_argument('--batch_size', default=16, type=int)
         self.parser.add_argument('--lr', default=5e-5, type=float)
+        self.parser.add_argument('--layerwise_lrdecay', action='store_true')
+        self.parser.add_argument('--lower_backbone_lr', action='store_true')
+        self.parser.add_argument('--decay_factor', default=0.9, type=float)
         self.parser.add_argument('--reinit_layers', default=0, type=int)
         self.parser.add_argument('--freeze_backbone', action='store_true')
         self.parser.add_argument('--unfreeze_layers', default=0, type=int)
         self.parser.add_argument('--focal_loss', action='store_true')
         self.parser.add_argument('--use_tfidf', action='store_true')
         self.parser.add_argument('--tfidf_features', default=5096, type=int)
+        self.parser.add_argument('--clean_data', action='store_true')
+        self.parser.add_argument('--use_augment', action='store_true')
         
     def parse(self, args=''):
         
         opt = self.parser.parse_args()
-        args = dict((name, getattr(opt, name)) for name in dir(opt) if not name.startswith('_'))
         
         if opt.unfreeze_layers > 0:
             opt.freeze_backbone = True
         
         print('Arguments:')
-        for k, v in sorted(args.items()):
-            print('  %s: %s' % (str(k), str(v)), flush=True)
+        args = dict((name, getattr(opt, name)) for name in dir(opt) if not name.startswith('_'))
             
         with open(f'./logs/{opt.exp_id}_opt.txt', 'w+', newline ='') as file:
-            args = dict((name, getattr(opt, name)) for name in dir(opt) if not name.startswith('_'))
             for k, v in sorted(args.items()):
+                print('  %s: %s' % (str(k), str(v)), flush=True)
                 file.write('  %s: %s\n' % (str(k), str(v)))
 
         return opt
 
-opt = opts().parse()
 
-# ----- Read Data & Clean
+opt = opts().parse()
+torch.manual_seed(opt.seed)
+
+# ----- Read Data
 
 # root = '/content/gdrive/MyDrive/DSML Coursework/CS4248 Project/raw_data/'
 root = '/home/svu/e0425991/bert/'
 
-df_train = pd.read_csv(os.path.join(root, './data/fulltrain.csv'), header=None)
+if opt.use_augment:
+    train_csv = './data/augmenttrain.csv'
+else:
+    train_csv = './data/fulltrain.csv'
+
+df_train = pd.read_csv(os.path.join(root, train_csv), header=None)
 df_test = pd.read_csv(os.path.join(root, './data/balancedtest.csv'), header=None)
 
 df_train.columns = ['cls', 'text']
 df_test.columns = ['cls', 'text']
 
+# ----- Remove Data with Naive Tokens < 10
+
+if opt.clean_data:
+    df_train['num_tokens'] = df_train['text'].apply(lambda x: len(wordpunct_tokenize(x)))
+    df_train = df_train[df_train['num_tokens'] >= 10].reset_index(drop=True)
+
 # ----- Tokenize Training Data
 
 tokenizer = AutoTokenizer.from_pretrained(opt.transformer, do_lower_case='uncased' in opt.transformer)
 AutoModel.from_pretrained(opt.transformer)
-
-def tokenize_sample(text, tokenizer):
-    return tokenizer.encode_plus(
-        text,
-        max_length=512,
-        add_special_tokens = True,
-        padding = 'max_length',
-        truncation = True,
-        return_attention_mask = True,
-        return_tensors = 'pt'
-    )
-
-def tokenize(df):
-    token_id = []
-    attention_masks = []
-
-    for sample in df['text'].values:
-        encoding_dict = tokenize_sample(sample, tokenizer)
-        token_id.append(encoding_dict['input_ids'])
-        attention_masks.append(encoding_dict['attention_mask'])
-
-    tokens = torch.cat(token_id, dim=0)
-    att_masks = torch.cat(attention_masks, dim=0)
-    labels = torch.tensor(df['cls'].astype(int).values) - 1
     
-    return tokens, labels, att_masks
-    
-train_tokens, train_labels, train_att_masks = tokenize(df_train)
-test_tokens, test_labels, test_att_masks = tokenize(df_test)
+train_tokens, train_labels, train_att_masks = tokenize(df_train, tokenizer)
+test_tokens, test_labels, test_att_masks = tokenize(df_test, tokenizer)
 
 train_idx, val_idx = train_test_split(
     np.arange(len(train_labels)),
     test_size = 0.2,
     shuffle = True,
-    stratify = train_labels)
+    stratify = train_labels,
+    random_state = opt.seed)
 
 # ----- Train and validation sets
 
@@ -151,17 +150,6 @@ train_set = TensorDataset(*train_data)
 val_set = TensorDataset(*val_data)
 test_set = TensorDataset(*test_data)
 
-# ----- Stratify Batches for Train Loader
-
-y_train = train_labels[train_idx].numpy()
-class_sample_count = [(y_train == t).sum() for t in range(4)]
-
-weight = 1. / np.array(class_sample_count)
-samples_weight = np.array([weight[t] for t in y_train])
-samples_weight = torch.from_numpy(samples_weight)
-
-sampler = WeightedRandomSampler(samples_weight.type('torch.DoubleTensor'), len(samples_weight))
-
 # ----- Prepare DataLoaders
 
 train_dataloader = DataLoader(
@@ -189,11 +177,16 @@ model = TransformerClassifier(
     focal_alpha = focal_loss_weight,
 )
 
-optimizer = torch.optim.AdamW(
-    model.parameters(),
-    lr = opt.lr,
-    eps = 1e-08
-)
+if opt.layerwise_lrdecay:
+    optimizer = LayerwiseLR(model, opt.lr, opt.decay_factor)
+elif opt.lower_backbone_lr:
+    optimizer = LowerBackboneLR(model, opt.lr)
+else:
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr = opt.lr,
+        eps = 1e-08
+    )
 
 # ----- Configure Backbone Freezing
 
@@ -254,6 +247,9 @@ results_df = pd.DataFrame(columns=items)
 
 for epoch in trange(opt.num_epochs, desc = 'Epoch'):
     
+    if epoch == 5:
+        break
+    
     tr_loss = nb_tr_examples = nb_tr_steps = 0
     model.train()
 
@@ -304,15 +300,16 @@ for epoch in trange(opt.num_epochs, desc = 'Epoch'):
     res = res.drop(columns=['accuracy', 'weighted avg'])
     results_df.loc[epoch] = res.to_numpy().flatten().tolist() + [acc, micro_f1]
 
+save_name = opt.transformer.split('/')[-1]
 
 def save(model, optimizer):
     # save
     torch.save({
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict()
-    }, os.path.join(root, 'BERT.pth'))
+    }, os.path.join(root, f'{save_name}.pth'))
 
 
 save(model, optimizer)
-results_df = results_df[items_ordered]
+results_df = results_df[items_ordered].round(3)
 results_df.to_csv(f'./logs/{opt.exp_id}.csv')

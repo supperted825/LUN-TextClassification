@@ -7,6 +7,5 @@ pbslogs/
 *.pbs
 *.DS_Store
 *__pycache__
-*.ipynb
 *.venus01
 *.pth

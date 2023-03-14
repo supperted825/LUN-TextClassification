@@ -41,20 +41,22 @@ class opts(object):
         self.parser.add_argument('--exp_id', default='default')
         self.parser.add_argument('--seed', default=42, type=int)
         self.parser.add_argument('--transformer', default="xlnet-base-cased")
+        
         self.parser.add_argument('--num_epochs', default=5, type=int)
         self.parser.add_argument('--batch_size', default=16, type=int)
         self.parser.add_argument('--lr', default=5e-5, type=float)
+        
+        self.parser.add_argument('--focal_loss', action='store_true')
+        self.parser.add_argument('--use_tfidf', action='store_true')
+        self.parser.add_argument('--tfidf_features', default=5096, type=int)
+        self.parser.add_argument('--use_augment', action='store_true')
+        
         self.parser.add_argument('--layerwise_lrdecay', action='store_true')
         self.parser.add_argument('--lower_backbone_lr', action='store_true')
         self.parser.add_argument('--decay_factor', default=0.9, type=float)
         self.parser.add_argument('--reinit_layers', default=0, type=int)
         self.parser.add_argument('--freeze_backbone', action='store_true')
         self.parser.add_argument('--unfreeze_layers', default=0, type=int)
-        self.parser.add_argument('--focal_loss', action='store_true')
-        self.parser.add_argument('--use_tfidf', action='store_true')
-        self.parser.add_argument('--tfidf_features', default=5096, type=int)
-        self.parser.add_argument('--clean_data', action='store_true')
-        self.parser.add_argument('--use_augment', action='store_true')
         
     def parse(self, args=''):
         
@@ -83,41 +85,29 @@ torch.manual_seed(opt.seed)
 root = '/home/svu/e0425991/bert/'
 
 if opt.use_augment:
-    train_csv = './data/augmenttrain.csv'
+    train_csv = './data/augmented_train.csv'
 else:
-    train_csv = './data/fulltrain.csv'
+    train_csv = './data/train.csv'
 
 df_train = pd.read_csv(os.path.join(root, train_csv), header=None)
-df_test = pd.read_csv(os.path.join(root, './data/balancedtest.csv'), header=None)
+df_val   = pd.read_csv(os.path.join(root, './data/validation.csv'), header=None)
+df_test  = pd.read_csv(os.path.join(root, './data/balancedtest.csv'), header=None)
 
 df_train.columns = ['cls', 'text']
-df_test.columns = ['cls', 'text']
+df_val.columns   = ['cls', 'text']
+df_test.columns  = ['cls', 'text']
 
-# ----- Remove Data with Naive Tokens < 10
-
-if opt.clean_data:
-    df_train['num_tokens'] = df_train['text'].apply(lambda x: len(wordpunct_tokenize(x)))
-    df_train = df_train[df_train['num_tokens'] >= 10].reset_index(drop=True)
-
-# ----- Tokenize Training Data
+# ----- Tokenize & Prepare Data
 
 tokenizer = AutoTokenizer.from_pretrained(opt.transformer, do_lower_case='uncased' in opt.transformer)
 AutoModel.from_pretrained(opt.transformer)
-    
-train_tokens, train_labels, train_att_masks = tokenize(df_train, tokenizer)
-test_tokens, test_labels, test_att_masks = tokenize(df_test, tokenizer)
 
-train_idx, val_idx = train_test_split(
-    np.arange(len(train_labels)),
-    test_size = 0.2,
-    shuffle = True,
-    stratify = train_labels,
-    random_state = opt.seed)
+train_tokens, train_att_masks, train_labels = tokenize(df_train, tokenizer)
+val_tokens, val_att_masks, val_labels = tokenize(df_val, tokenizer)
+test_tokens, test_att_masks, test_labels = tokenize(df_test, tokenizer)
 
-# ----- Train and validation sets
-
-train_data = [train_tokens[train_idx], train_att_masks[train_idx], train_labels[train_idx]]
-val_data   = [train_tokens[val_idx], train_att_masks[val_idx], train_labels[val_idx]]
+train_data = [train_tokens, train_att_masks, train_labels]
+val_data   = [val_tokens, val_att_masks, val_labels ]
 test_data  = [test_tokens, test_att_masks, test_labels]
 
 if opt.use_tfidf:
@@ -130,8 +120,8 @@ if opt.use_tfidf:
         max_features=5096
     )
     
-    train_tfidf = tfidf.fit_transform(df_train.loc[train_idx, 'text'].tolist())
-    val_tfidf   = tfidf.transform(df_train.loc[val_idx, 'text'].tolist())
+    train_tfidf = tfidf.fit_transform(df_train['text'].tolist())
+    val_tfidf   = tfidf.transform(df_val['text'].tolist())
     test_tfidf  = tfidf.transform(df_test['text'].tolist())
     
     train_tfidf = torch.from_numpy(train_tfidf.toarray())
@@ -283,11 +273,11 @@ for epoch in trange(opt.num_epochs, desc = 'Epoch'):
     val_label_pred = evaluate(validation_dataloader)
     test_label_pred = evaluate(test_dataloader)
     
-    print(f'Epoch {epoch} - {opt.exp_id}')
+    print(f'Epoch {epoch + 1} - {opt.exp_id}')
     print('Train loss: {:.4f}'.format(tr_loss / nb_tr_steps))
     
     print('Validation Set Classification Report\n')
-    print(classification_report(train_labels[val_idx], val_label_pred))
+    print(classification_report(val_labels, val_label_pred))
 
     print('Test Set Classification Report\n')
     print(classification_report(test_labels, test_label_pred), flush=True)

@@ -24,4 +24,4 @@ def tokenize(df, tokenizer):
     att_masks = torch.cat(attention_masks, dim=0)
     labels = torch.tensor(df['cls'].astype(int).values) - 1
     
-    return tokens, labels, att_masks
+    return tokens, att_masks, labels

@@ -6,17 +6,17 @@ from transformers import AutoModel, AutoConfig
 from .loss import FocalLoss
 
 
-class MeanPooling(nn.Module):
-    def __init__(self):
-        super(MeanPooling, self).__init__()
-        
-    def forward(self, last_hidden_state, attention_mask):
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
-        sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, 1)
-        sum_mask = input_mask_expanded.sum(1)
-        sum_mask = torch.clamp(sum_mask, min=1e-9)
-        mean_embeddings = sum_embeddings / sum_mask
-        return mean_embeddings
+def mean_pooling(model_output, attention_mask):
+    
+    token_embeddings = model_output[0]
+    attention_mask = attention_mask.unsqueeze(-1)
+    mask_expanded  = attention_mask.expand(token_embeddings.size()).float()
+    
+    embed_num = torch.sum(token_embeddings * mask_expanded, dim=1) 
+    embed_den = torch.clamp(mask_expanded.sum(1), min=1e-9)
+    sentence_embeddings = embed_num / embed_den
+    
+    return F.normalize(sentence_embeddings, p=2, dim=1)
 
 
 class TransformerClassifier(nn.Module):
@@ -49,7 +49,7 @@ class TransformerClassifier(nn.Module):
             token_type_ids=token_type_ids
         )
         
-        output = F.dropout(output.last_hidden_state[:, 0])
+        output = mean_pooling(output, attention_mask)
         
         x = self.fc1(output)
         x = F.relu(x)
@@ -74,7 +74,6 @@ class MLPClassifier(nn.Module):
         super(MLPClassifier, self).__init__()
         self.fc1 = nn.Linear(tfidf_dim, fc_dim + tfidf_dim)
         self.fc2 = nn.Linear(fc_dim + tfidf_dim, 4)
-        self.dropout = nn.Dropout(p=0.5)
         self.loss = nn.CrossEntropyLoss()
     
     def forward(self, x, labels=None):
@@ -82,7 +81,7 @@ class MLPClassifier(nn.Module):
         x = x.float()
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.dropout(x)
+        x = F.dropout(x)
         x = self.fc2(x)
 
         return self.loss(x, labels.long()) if labels is not None else x

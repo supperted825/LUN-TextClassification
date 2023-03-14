@@ -36,6 +36,7 @@ class opts(object):
         self.parser.add_argument('--batch_size', default=16, type=int)
         self.parser.add_argument('--focal_loss', action='store_true')
         self.parser.add_argument('--tfidf_features', default=5096, type=int)
+        self.parser.add_argument('--use_augment', action='store_true')
         
     def parse(self, args=''):
         

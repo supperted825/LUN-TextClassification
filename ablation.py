@@ -62,22 +62,22 @@ torch.manual_seed(0)
 # root = '/content/gdrive/MyDrive/DSML Coursework/CS4248 Project/raw_data/'
 root = '/home/svu/e0425991/bert/'
 
-df_train = pd.read_csv(os.path.join(root, './data/fulltrain.csv'), header=None)
-df_test = pd.read_csv(os.path.join(root, './data/balancedtest.csv'), header=None)
+if opt.use_augment:
+    train_csv = './data/augmented_train.csv'
+else:
+    train_csv = './data/train.csv'
+
+df_train = pd.read_csv(os.path.join(root, train_csv), header=None)
+df_val   = pd.read_csv(os.path.join(root, './data/validation.csv'), header=None)
+df_test  = pd.read_csv(os.path.join(root, './data/balancedtest.csv'), header=None)
 
 df_train.columns = ['cls', 'text']
-df_test.columns = ['cls', 'text']
+df_val.columns   = ['cls', 'text']
+df_test.columns  = ['cls', 'text']
 
 df_train['cls'] = df_train['cls'] - 1
-df_test['cls'] = df_test['cls'] - 1
-
-# ----- Train Test Split
-
-train_idx, val_idx = train_test_split(
-    np.arange(len(df_train['cls'])),
-    test_size = 0.2,
-    shuffle = True,
-    stratify = df_train['cls'])
+df_val['cls']   = df_val['cls'] - 1
+df_test['cls']  = df_test['cls'] - 1
 
 # ----- Train and validation sets
 
@@ -89,16 +89,16 @@ tfidf = TfidfVectorizer(
     max_features=opt.tfidf_features
 )
 
-train_tfidf = tfidf.fit_transform(df_train.loc[train_idx, 'text'].tolist())
-val_tfidf   = tfidf.transform(df_train.loc[val_idx, 'text'].tolist())
+train_tfidf = tfidf.fit_transform(df_train['text'].tolist())
+val_tfidf   = tfidf.transform(df_val['text'].tolist())
 test_tfidf  = tfidf.transform(df_test['text'].tolist())
 
 train_tfidf = torch.from_numpy(train_tfidf.toarray())
 val_tfidf   = torch.from_numpy(val_tfidf.toarray())
 test_tfidf  = torch.from_numpy(test_tfidf.toarray())
 
-train_labels = torch.from_numpy(df_train.loc[train_idx,'cls'].to_numpy())
-val_labels   = torch.from_numpy(df_train.loc[val_idx, 'cls'].to_numpy())
+train_labels = torch.from_numpy(df_train['cls'].to_numpy())
+val_labels   = torch.from_numpy(df_val['cls'].to_numpy())
 test_labels  = torch.from_numpy(df_test['cls'].to_numpy())
     
 train_set = TensorDataset(train_tfidf, train_labels)

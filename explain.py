@@ -1,4 +1,7 @@
-
+"""
+Script for visualising transformer attention layers
+when classfying on the Labeled Unreliable News Dataset.
+"""
 
 import os
 import time

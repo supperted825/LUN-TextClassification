@@ -10,7 +10,7 @@ We use Python 3.8 with PyTorch v1.9. Additional core dependencies are transforme
 
 * [train.py](train.py) - Main python file for finetuning huggingface transformer models on the LUN dataset.
 
-* [ablation.py](ablation.py) - Trains a simple neural network (without transformer embedding inputs) as part of ablation studies.
+* [ablation.py](ablation.py) - Trains a simple NN on TF-IDF inputs only, as part of ablation studies.
 
 * [augment.py](augment.py) - Applies train-test split and text augmentations with NLPaug to yield an augmented training set.
 
@@ -22,11 +22,11 @@ We use Python 3.8 with PyTorch v1.9. Additional core dependencies are transforme
 
 * [src/utils.py](./src/utils.py) - Utility functions to be called during training routines.
 
-* [exploration.ipynb](./notebooks/exploration.ipynb) - Jupyter notebook for dataset exploration.
+* [notebooks/exploration.ipynb](./notebooks/exploration.ipynb) - Notebook for dataset exploration.
 
-* [baselines.ipynb](./notebooks/baselines.ipynb) - Jupyter notebook for training classical machine learning model baselines (eg. logistic regression)
+* [notebooks/baselines.ipynb](./notebooks/baselines.ipynb) - Notebook for training classical ML baselines (eg. logistic regression)
 
-* [analysis.ipynb](./notebooks/analysis.ipynb) - Jupyter notebook for analysis and consolidation of training results.
+* [notebooks/analysis.ipynb](./notebooks/analysis.ipynb) - Notebook for analysis and consolidation of training results.
 
 * [requirements.txt](requirements.txt) - Pip-installable requirements for running the project.
 

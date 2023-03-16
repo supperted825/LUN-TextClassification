@@ -26,9 +26,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, f1_score
 from sklearn.metrics import precision_recall_fscore_support as score
 
-import nlpaug.flow as naf
-import nlpaug.augmenter.word as naw
-
 from src.models import TransformerClassifier
 from src.learning_rate import LayerwiseLR, LowerBackboneLR
 from src.utils import tokenize
@@ -233,6 +230,18 @@ items = [i + '_' + str(c) for i in idx for c in col] + ['accuracy', 'micro_f1']
 items_ordered = [i + '_' + str(c) for c in col for i in idx] + ['accuracy', 'micro_f1']
 results_df = pd.DataFrame(columns=items)
 
+# ----- Model Saving
+
+best_f1 = 0.0
+save_name = opt.transformer.split('/')[-1]
+
+def save(model, optimizer):
+    # save
+    torch.save({
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict()
+    }, os.path.join(root, f'{save_name}.pth'))
+
 # ----- Begin Training
 
 for epoch in trange(opt.num_epochs, desc = 'Epoch'):
@@ -283,23 +292,17 @@ for epoch in trange(opt.num_epochs, desc = 'Epoch'):
     print(classification_report(test_labels, test_label_pred), flush=True)
     
     micro_f1 = f1_score(test_labels, test_label_pred, average='micro')
+    macro_f1 = f1_score(test_labels, test_label_pred, average='macro')
     epoch_report = classification_report(test_labels, test_label_pred, output_dict=True)
     
     res = pd.DataFrame(epoch_report)
     acc = res['accuracy'].mean()
     res = res.drop(columns=['accuracy', 'weighted avg'])
     results_df.loc[epoch] = res.to_numpy().flatten().tolist() + [acc, micro_f1]
+    
+    if macro_f1 > best_f1:
+        best_f1 = macro_f1
+        save(model, optimizer)
 
-save_name = opt.transformer.split('/')[-1]
-
-def save(model, optimizer):
-    # save
-    torch.save({
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict()
-    }, os.path.join(root, f'{save_name}.pth'))
-
-
-save(model, optimizer)
 results_df = results_df[items_ordered].round(3)
 results_df.to_csv(f'./logs/{opt.exp_id}.csv')

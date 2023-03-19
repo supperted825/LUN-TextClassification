@@ -36,6 +36,7 @@ class opts(object):
         self.parser.add_argument('--batch_size', default=16, type=int)
         self.parser.add_argument('--focal_loss', action='store_true')
         self.parser.add_argument('--tfidf_features', default=5096, type=int)
+        self.parser.add_argument('--fc_dim', default=0, type=int)
         self.parser.add_argument('--use_augment', action='store_true')
         
     def parse(self, args=''):
@@ -140,7 +141,7 @@ focal_loss_weight = torch.Tensor([0.5, 0.5, 1, 0.5]).float() if opt.focal_loss e
 
 model = MLPClassifier(
     tfidf_dim = tfidf_feature_dims,
-    fc_dim = 768
+    fc_dim = opt.fc_dim
 )
 
 optimizer = torch.optim.AdamW(

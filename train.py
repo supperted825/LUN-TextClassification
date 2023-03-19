@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Training Script for Finetuning any transformer-based
 classifier on the Labeled Unreliable News Dataset.

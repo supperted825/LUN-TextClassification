@@ -3,6 +3,7 @@ figures/
 logs/
 pbsscripts/
 pbslogs/
+results*/
 *.sh
 *.o*
 *.pbs

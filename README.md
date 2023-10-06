@@ -18,7 +18,7 @@ We use Python 3.8 with PyTorch v1.9. Additional core dependencies are transforme
 
 * [src/loss.py](./src/loss.py) - Various classification loss functions (eg. focal loss).
 
-* [src/utils.py](./src/learning_rate.py) - Functions for layerwise learning rate decay and lowered backbone learning rate.
+* [src/learning_rate.py](./src/learning_rate.py) - Functions for layerwise learning rate decay and lowered backbone learning rate.
 
 * [src/utils.py](./src/utils.py) - Utility functions to be called during training routines.
 
